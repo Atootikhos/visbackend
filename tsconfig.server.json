@@ -5,6 +5,7 @@
     "target": "ES2022",
     "sourceMap": true,
     "outDir": "dist",
+    "rootDir": "server",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
