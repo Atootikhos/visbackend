@@ -3,7 +3,7 @@ FROM node:20-slim AS build
 
 # Install necessary tools: git and git-lfs
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y git git-lfs && \
+    apt-get install --no-install-recommends -y git git-lfs ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # Set up the working directory
