@@ -1,45 +1,51 @@
-# syntax = docker/dockerfile:1
+# Stage 1: Build environment
+FROM node:20-slim AS build
 
-# Adjust NODE_VERSION as desired
-ARG NODE_VERSION=20.18.0
-FROM node:${NODE_VERSION}-slim AS base
+# Install necessary tools: git and git-lfs
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y git git-lfs && \
+    rm -rf /var/lib/apt/lists/*
 
-LABEL fly_launch_runtime="Node.js"
-
-# Node.js app lives here
+# Set up the working directory
 WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV="production"
+# Initialize Git LFS
+RUN git lfs install
 
-
-# Throw-away build stage to reduce size of final image
-FROM base AS build
-
-# Install packages needed to build node modules
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
-
-# Install node modules
-COPY package-lock.json package.json ./
-RUN npm ci --include=dev
-
-# Copy application code
+# Copy repository files
 COPY . .
 
-# Build application
+# Pull the large files tracked by Git LFS
+RUN git lfs pull
+
+# Install all dependencies, including devDependencies for the build step
+RUN npm install
+
+# Build the TypeScript application
 RUN npm run build
 
-# Remove development dependencies
-RUN npm prune --omit=dev
+# Remove development dependencies for a smaller final image
+RUN npm prune --production
 
 
-# Final stage for app image
-FROM base
+# Stage 2: Final production image
+FROM node:20-slim AS final
 
-# Copy built application
-COPY --from=build /app /app
+# Set production environment
+ENV NODE_ENV=production
 
-# Start the server by default, this can be overwritten at runtime
+# Set up the working directory
+WORKDIR /app
+
+# Copy the built application, node_modules, and public assets from the build stage
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/public ./public
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/server ./server
+
+# Expose the port the app will listen on
 EXPOSE 8080
-CMD [ "npm", "run", "start" ]
+
+# Start the server
+CMD [ "node", "dist/server.js" ]
