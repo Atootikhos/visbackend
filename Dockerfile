@@ -9,18 +9,30 @@ RUN apt-get update -qq && \
 # Set up the working directory
 WORKDIR /app
 
-# First, copy the Git configuration so we can pull LFS files
-COPY .git ./.git
-COPY .gitattributes ./
+# --- Git LFS Setup ---
+# Initialize a new, temporary git repository
+RUN git init
+
+# Add the remote repository URL
+RUN git remote add origin https://github.com/Atootikhos/visbackend.git
+
+# Enable sparse checkout to only fetch necessary files
+RUN git config core.sparseCheckout true
+# Define which files/folders to fetch (everything except node_modules)
+RUN echo "/*\n!/node_modules" > .git/info/sparse-checkout
+
+# Fetch the repository history
+RUN git fetch --depth=1 origin main
+
+# Checkout the files from the fetched history
+RUN git checkout main
 
 # Initialize Git LFS in the container
 RUN git lfs install
 
 # Now, pull the large files tracked by Git LFS
 RUN git lfs pull
-
-# Copy the rest of the application files
-COPY . .
+# --- End Git LFS Setup ---
 
 # Install dependencies
 RUN npm install
