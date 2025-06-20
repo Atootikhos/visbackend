@@ -9,16 +9,20 @@ RUN apt-get update -qq && \
 # Set up the working directory
 WORKDIR /app
 
-# Initialize Git LFS
+# First, copy the Git configuration so we can pull LFS files
+COPY .git ./.git
+COPY .gitattributes ./
+
+# Initialize Git LFS in the container
 RUN git lfs install
 
-# Copy repository files
-COPY . .
-
-# Pull the large files tracked by Git LFS
+# Now, pull the large files tracked by Git LFS
 RUN git lfs pull
 
-# Install all dependencies, including devDependencies for the build step
+# Copy the rest of the application files
+COPY . .
+
+# Install dependencies
 RUN npm install
 
 # Build the TypeScript application
