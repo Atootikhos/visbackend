@@ -95,6 +95,7 @@ app.post('/api/detect', upload.single('image'), async (req, res) => {
     }
 });
 
+app.options('/api/delete-mask', cors()); // enable pre-flight request for DELETE request
 app.post('/api/delete-mask', (req, res) => {
     const { filename } = req.body;
     if (!filename) {
